@@ -36,6 +36,11 @@
         <span class="stat-label">최근 수집</span>
         <span id="lastTime" class="stat-value-sub">-</span>
       </div>
+      <div class="stat-divider" aria-hidden="true"></div>
+      <div class="stat-item">
+        <span class="stat-label">자동 저장</span>
+        <span id="autoSaveStatus" class="stat-value-sub">꺼짐</span>
+      </div>
     </section>
 
     <!-- 실시간 미리보기 스트림: 자막 리스트 및 복사 버튼 / Live Preview Stream: Captions & Copy Action -->
@@ -73,7 +78,7 @@
 
     <!-- 상세 설정 아코디언 / Detailed Settings Accordion -->
     <details class="settings-accordion">
-      <summary class="settings-summary">⚙️ 상세 설정 (타임스탬프 / 셀렉터)</summary>
+      <summary class="settings-summary">⚙️ 상세 설정 (타임스탬프 / 자동저장 / 셀렉터)</summary>
       <div class="settings-body">
         <div class="form-group">
           <label for="timestampModeSelect">타임스탬프 형식</label>
@@ -81,6 +86,24 @@
             <option value="both">PC 시각 + 영상 시각 병기 (추천)</option>
             <option value="pc">PC 절대 시각만</option>
             <option value="player">영상 재생 시각만</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="autoSaveIntervalSelect">주기적 자동 파일 저장 (백업)</label>
+          <select id="autoSaveIntervalSelect" class="form-select">
+            <option value="0">사용 안 함 (수동 저장만)</option>
+            <option value="5">5분마다 자동 다운로드</option>
+            <option value="10">10분마다 자동 다운로드</option>
+            <option value="30">30분마다 자동 다운로드</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="autoSaveFormatSelect">자동 저장 파일 포맷</label>
+          <select id="autoSaveFormatSelect" class="form-select">
+            <option value="txt">텍스트 문서 (.txt)</option>
+            <option value="md">마크다운 문서 (.md)</option>
           </select>
         </div>
 
@@ -93,6 +116,13 @@
           <label for="selectorInput">수동 CSS 선택자 (기본 감지 실패 시)</label>
           <input type="text" id="selectorInput" class="form-input" placeholder="#viewSubtit .incont">
         </div>
+
+        <div class="form-group checkbox-group">
+          <label class="form-checkbox-label" for="showFloatingWidgetCheck">
+            <input type="checkbox" id="showFloatingWidgetCheck" class="form-checkbox" checked>
+            <span>방송 웹페이지 내 플로팅 버튼 표시</span>
+          </label>
+        </div>
       </div>
     </details>
 
@@ -101,8 +131,8 @@
   </div>
 
   <!-- 스크립트 의존성 로드 / Load Script Dependencies -->
-  <script src="../config/constants.js"></script>
-  <script src="../utils/export-formatter.js"></script>
-  <script src="popup.js"></script>
+  <script src="/config/constants.js"></script>
+  <script src="/utils/export-formatter.js"></script>
+  <script src="/popup/popup.js"></script>
 </body>
 </html>

@@ -117,6 +117,10 @@ async function runTests() {
     timestampModeSelect: new MockElement("timestampModeSelect", "select"),
     pauseThresholdInput: new MockElement("pauseThresholdInput", "input"),
     selectorInput: new MockElement("selectorInput", "input"),
+    autoSaveIntervalSelect: new MockElement("autoSaveIntervalSelect", "select"),
+    autoSaveFormatSelect: new MockElement("autoSaveFormatSelect", "select"),
+    showFloatingWidgetCheck: new MockElement("showFloatingWidgetCheck", "input"),
+    autoSaveStatus: new MockElement("autoSaveStatus", "span"),
     toast: new MockElement("toast")
   };
 
@@ -333,6 +337,22 @@ async function runTests() {
   elements.selectorInput.value = ".custom-caption";
   elements.selectorInput.dispatchEvent({ type: "change" });
   assert.strictEqual(mockStorageData["assembly_custom_selector"], ".custom-caption");
+
+  // 자동 저장 주기 및 포맷, 플로팅 위젯 토글 검증
+  // Verify auto-save interval, format, and floating widget toggle
+  elements.autoSaveIntervalSelect.value = "10";
+  elements.autoSaveIntervalSelect.dispatchEvent({ type: "change" });
+  assert.strictEqual(mockStorageData["assembly_auto_save_interval_min"], 10);
+  assert.strictEqual(elements.autoSaveStatus.textContent, "10분");
+
+  elements.autoSaveFormatSelect.value = "md";
+  elements.autoSaveFormatSelect.dispatchEvent({ type: "change" });
+  assert.strictEqual(mockStorageData["assembly_auto_save_format"], "md");
+
+  elements.showFloatingWidgetCheck.checked = false;
+  elements.showFloatingWidgetCheck.dispatchEvent({ type: "change" });
+  assert.strictEqual(mockStorageData["assembly_show_floating_widget"], false);
+
   console.log("✓ Settings update events passed");
 
   // -------------------------------------------------------------

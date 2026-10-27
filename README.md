@@ -70,43 +70,59 @@ The Republic of Korea National Assembly webcast services broadcast plenary meeti
 - 특수한 페이지 구조를 위한 **사용자 정의 CSS 셀렉터(Custom Selector)** 지원.
 - Pre-configured with National Assembly Webcast player selectors, with fallback and custom selector overrides.
 
+### 7. 화면 내 플로팅 위젯 (In-Page Floating Widget) 🚀
+- 브라우저 상단 툴바 팝업을 열지 않고도, **국회 의사중계 시청 화면 우측 하단에 항상 떠 있는 플로팅 배지 및 미니 컨트롤러**를 제공합니다.
+- **Shadow DOM**으로 격리되어 있어 국회 웹페이지의 기존 CSS 스타일과 일체 충돌하지 않습니다.
+- 영상 전체화면 모드나 창 크기와 관계없이 실시간 수집 건수 확인, 수집 시작/중지, 원클릭 복사, 즉시 다운로드를 화면 위에서 바로 조작할 수 있습니다.
+- Provides a clean on-screen floating widget injected directly into the live webcast page using Shadow DOM isolation. Controls recording, copying, and instant downloads right on the broadcast screen.
+
+### 8. 주기적 자동 파일 저장 (Periodic Auto-Save) 💾
+- 장시간 이어지는 본회의, 청문회, 국정감사(3~8시간 이상) 시청 중 브라우저 탭 충돌이나 메모리 부족 등으로 인한 데이터 유실을 방지합니다.
+- **5분, 10분, 30분** 간격으로 지금까지 수집된 회의 자막을 사용자가 지정한 형식(TXT 또는 Markdown)으로 로컬 다운로드 폴더에 자동 분할 저장합니다.
+- 확장 프로그램 팝업창을 닫아도 **웹페이지 탭 내에서 백그라운드로 안전하게 동작**합니다.
+- Automatically saves and downloads collected captions at configurable intervals (e.g. every 5, 10, or 30 minutes) in TXT or Markdown format directly to your Downloads folder to prevent data loss during long legislative sessions.
+
 ---
 
 ## 시스템 아키텍처 / System Architecture
 
 ```
-┌────────────────────────────────────────────────────────┐
-│               Chrome Web Browser Tab                   │
-│   (assembly.webcast.go.kr / *.assembly.go.kr)         │
-│                                                        │
-│  ┌──────────────────────┐    ┌──────────────────────┐  │
-│  │ HTML5 <video> Player │    │ Caption DOM Element  │  │
-│  │   (currentTime)      │    │ (#viewSubtit .incont)│  │
-│  └──────────┬───────────┘    └──────────┬───────────┘  │
-│             │                           │ (Mutation)   │
-│             ▼                           ▼              │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │    content/caption-engine.js                     │  │
-│  │    - MutationObserver & Selector Resolution      │  │
-│  │    - Deduplication & Substring Prefix Merging    │  │
-│  │    - Dual Timestamps (KST Local + Video Playback)│  │
-│  │    - Smart Silence-based Paragraph Chunking      │  │
-│  └──────────────────────────┬───────────────────────┘  │
-│                             │                          │
-│                             ▼                          │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │    content/content.js (Runtime Messaging)        │  │
-│  └──────────────────────────┬───────────────────────┘  │
-└─────────────────────────────┼──────────────────────────┘
-                              │ Chrome Storage / Message
-                              ▼
-┌────────────────────────────────────────────────────────┐
-│    popup/popup.js, popup.html, popup.css               │
-│    - Status Badge & Real-time Live Preview List        │
-│    - Recording Toggle / One-click Copy / Clear Records │
-│    - Settings (Timestamp Mode, Silence Threshold, CSS) │
-│    - Export Formatter (TXT / Markdown Download)        │
-└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Chrome Web Browser Tab                          │
+│             (assembly.webcast.go.kr / *.assembly.go.kr)                │
+│                                                                        │
+│  ┌──────────────────────┐              ┌──────────────────────────┐    │
+│  │ HTML5 <video> Player │              │   Caption DOM Element    │    │
+│  │   (currentTime)      │              │  (#viewSubtit .incont)   │    │
+│  └──────────┬───────────┘              └───────────┬──────────────┘    │
+│             │                                      │ (Mutation)        │
+│             ▼                                      ▼                   │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │    content/caption-engine.js                                   │    │
+│  │    - MutationObserver & Dynamic Selector Resolution            │    │
+│  │    - Deduplication & Progressive Substring Prefix Merging      │    │
+│  │    - Dual Timestamps (KST Local + Video Playback Time)         │    │
+│  │    - Smart Silence-based Paragraph Chunking                    │    │
+│  └─────────────────────────────────┬──────────────────────────────┘    │
+│                                    │                                   │
+│                                    ▼                                   │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │    content/content.js                                          │    │
+│  │    - Runtime Messaging Router                                  │    │
+│  │    - In-Page Floating Widget (Shadow DOM Overlay Control)      │    │
+│  │    - Periodic Auto-Save Engine (Independent 5/10/30m Timer)   │    │
+│  └─────────────────────────────────┬──────────────────────────────┘    │
+└────────────────────────────────────┼───────────────────────────────────┘
+                                     │ Chrome Storage / Message
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│    popup/popup.js, popup.html, popup.css                               │
+│    - Status Badge & Real-time Live Preview List (Fixed min-height)     │
+│    - Recording Toggle / One-click Copy / Clear Records                 │
+│    - Settings (Timestamp Mode, Silence Threshold, CSS Selector)        │
+│    - Periodic Auto-Save Settings & Floating Widget Toggle              │
+│    - Export Formatter (TXT / Markdown Download)                        │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -124,25 +140,27 @@ The Republic of Korea National Assembly webcast services broadcast plenary meeti
 4. **압축해제된 확장 프로그램 로드**:
    - 화면 좌측 상단의 **[압축해제된 확장 프로그램을 로드합니다]** (Load unpacked) 버튼을 클릭합니다.
    - 클론한 프로젝트 폴더(`assembly-caption-collector`)를 선택합니다.
-5. **확장 프로그램 핀 고정 (선택 사항)**:
-   - Chrome 주소창 우측 퍼즐 모양 아이콘을 눌러 [대한민국 국회 의사중계 실시간 자막 수집기]를 툴바에 고정합니다.
+5. **📌 툴바 핀(고정) 필수 안내 (중요)**:
+   - Chrome은 로드된 확장 프로그램을 기본적으로 주소창 우측 퍼즐 아이콘(`🧩`) 내부에 숨겨둡니다.
+   - 브라우저 상단 우측의 **퍼즐 아이콘(`🧩`)**을 클릭한 후, **[국회 의사중계 실시간 자막 수집기]** 우측의 **핀 아이콘(`📌`)**을 클릭하여 브라우저 상단 툴바에 고정해주세요.
 
 ---
 
 ## 사용 방법 / Usage Instructions
 
+> 💡 **두 가지 조작 방식 지원**: 브라우저 상단 **툴바 팝업**을 열거나, 영상 시청 화면 우측 하단의 **플로팅 위젯**을 바로 조작할 수 있습니다.
+
 1. **국회 의사중계 웹사이트 접속**:
-   - [국회인터넷의사중계시스템 (webcast.assembly.go.kr)](https://assembly.webcast.go.kr/main/) 또는 [국회방송 (natv.go.kr)](https://www.natv.go.kr/)의 회의 중계/다시보기 영상 페이지로 이동합니다.
+   - [국회인터넷의사중계시스템 (assembly.webcast.go.kr)](https://assembly.webcast.go.kr/main/) 또는 회의 영상 페이지로 이동합니다.
 2. **자막 켜기**:
    - 플레이어 화면 내의 `자막(CC)` 버튼을 활성화하여 화면에 자막 텍스트가 표시되도록 합니다.
-3. **수집 시작**:
-   - 브라우저 상단의 확장 프로그램 아이콘을 클릭하여 팝업을 엽니다.
-   - **[수집 시작]** 버튼을 클릭하면 상태가 녹색 `● 수집 중`으로 변경되며 자막 감지가 시작됩니다.
-4. **실시간 미리보기 & 복사**:
-   - 회의가 진행됨에 따라 팝업창 하단의 실시간 스트림 영역에 타임스탬프와 함께 수집된 자막이 표시됩니다.
-   - 필요 시 **[전체 복사]** 버튼을 눌러 지금까지 수집된 모든 자막을 클립보드로 복사합니다.
-5. **문서 다운로드**:
-   - 회의 종료 후 **[TXT 다운로드]** 또는 **[Markdown 다운로드]** 버튼을 눌러 정돈된 파일을 저장합니다.
+3. **화면 내 플로팅 위젯 (In-Page Widget)으로 바로 사용**:
+   - 중계 페이지가 열리면 화면 우측 하단에 **`🏛️ 0건 | 대기`** 플로팅 배지가 나타납니다.
+   - 배지를 클릭하면 미니 컨트롤 창이 열려 **[수집 시작]**, **[복사]**, **[TXT]**, **[MD]**를 시청 화면에서 바로 수행할 수 있습니다.
+4. **툴바 팝업으로 상세 제어 & 실시간 스트림 확인**:
+   - 브라우저 상단 확장 프로그램 아이콘을 클릭하여 팝업을 열면, 실시간 자막 피드, 문단 구분 뱃지, 상세 설정을 조작할 수 있습니다.
+5. **주기적 자동 파일 저장 (Periodic Auto-Save)**:
+   - 상세 설정에서 자동 저장 주기를 `5분`, `10분`, `30분`으로 지정하면 회의 도중 정기적으로 파일이 다운로드 폴더에 자동 백업됩니다.
 
 ---
 
@@ -151,6 +169,13 @@ The Republic of Korea National Assembly webcast services broadcast plenary meeti
 팝업창 하단의 **[상세 설정 / Settings]** 아코디언 메뉴를 클릭하여 설정을 조정할 수 있습니다.
 
 | 설정 항목 (Option) | 기본값 (Default) | 설명 (Description) |
+| :--- | :--- | :--- |
+| **자동 저장 주기** | `사용 안 함 (Off)` | `사용 안 함`, `5분`, `10분`, `30분` 단위로 회의 자막을 로컬에 자동 분할 저장합니다. |
+| **자동 저장 파일 형식** | `텍스트 파일 (.txt)` | 주기적 자동 저장 시 출력할 형식(`TXT` 또는 `Markdown`)을 선택합니다. |
+| **화면 내 플로팅 위젯** | `체크 (On)` | 국회 중계 페이지 화면 우측 하단에 오버레이 컨트롤러 표시 여부를 결정합니다. |
+| **타임스탬프 모드** | `둘 다 병기 (Both)` | `PC 절대시각`, `플레이어 재생시각`, `둘 다 병기` 중 출력 형식을 선택합니다. |
+| **문단 분할 기준 시간** | `3초 (3000ms)` | 발언자 교대 또는 묵음 공백 시간 기준입니다. 설정된 시간 동안 새 자막이 없으면 새 문단으로 분할합니다. |
+| **커스텀 CSS 선택자** | `(공백 / Auto)` | 비표준 플레이어나 특수 웹페이지에서 특정 자막 DOM 요소를 타겟팅해야 할 때 입력합니다. |
 | :--- | :--- | :--- |
 | **타임스탬프 모드** | `둘 다 병기 (Both)` | `PC 절대시각`, `플레이어 재생시각`, `둘 다 병기` 중 출력 형식을 선택합니다. |
 | **문단 분할 기준 시간** | `3초 (3000ms)` | 발언자 교대 또는 묵음 공백 시간 기준입니다. 설정된 시간 동안 새 자막이 없으면 새 문단으로 분할합니다. |

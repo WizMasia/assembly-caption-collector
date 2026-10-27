@@ -17,7 +17,7 @@
  * @property {string} [title] - 페이지 제목 / Webcast page title
  */
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function initPopup() {
   /**
    * 중앙 상수 및 유틸리티 참조
    * References to centralized constants and utilities
@@ -36,7 +36,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     IS_RECORDING: "assembly_is_recording",
     CUSTOM_SELECTOR: "assembly_custom_selector",
     TIMESTAMP_MODE: "assembly_timestamp_mode",
-    PAUSE_THRESHOLD_MS: "assembly_pause_threshold_ms"
+    PAUSE_THRESHOLD_MS: "assembly_pause_threshold_ms",
+    AUTO_SAVE_INTERVAL_MIN: "assembly_auto_save_interval_min",
+    AUTO_SAVE_FORMAT: "assembly_auto_save_format",
+    SHOW_FLOATING_WIDGET: "assembly_show_floating_widget"
   };
 
   /**
@@ -62,6 +65,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   /** @type {HTMLElement|null} */
   const lastTimeEl = document.getElementById("lastTime");
   /** @type {HTMLElement|null} */
+  const autoSaveStatus = document.getElementById("autoSaveStatus");
+  /** @type {HTMLElement|null} */
   const previewList = document.getElementById("previewList");
   /** @type {HTMLElement|null} */
   const emptyNotice = document.getElementById("emptyNotice");
@@ -81,10 +86,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const copyAllBtn = /** @type {HTMLButtonElement|null} */ (document.getElementById("copyAllBtn"));
   /** @type {HTMLSelectElement|null} */
   const timestampModeSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("timestampModeSelect"));
+  /** @type {HTMLSelectElement|null} */
+  const autoSaveIntervalSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("autoSaveIntervalSelect"));
+  /** @type {HTMLSelectElement|null} */
+  const autoSaveFormatSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById("autoSaveFormatSelect"));
   /** @type {HTMLInputElement|null} */
   const pauseThresholdInput = /** @type {HTMLInputElement|null} */ (document.getElementById("pauseThresholdInput"));
   /** @type {HTMLInputElement|null} */
   const selectorInput = /** @type {HTMLInputElement|null} */ (document.getElementById("selectorInput"));
+  /** @type {HTMLInputElement|null} */
+  const showFloatingWidgetCheck = /** @type {HTMLInputElement|null} */ (document.getElementById("showFloatingWidgetCheck"));
   /** @type {HTMLElement|null} */
   const toast = document.getElementById("toast");
 
@@ -270,8 +281,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       : DEFAULT_TIMESTAMP_MODE;
     renderPreview(currentRecords, currentMode);
 
-    // 4. 입력 필드 값 갱신 (제공된 경우)
-    // 4. Update input field values if provided
+    // 4. 자동 저장 상태 및 선택 위젯 갱신
+    // 4. Update auto-save status and controls
+    if (autoSaveStatus) {
+      const interval = typeof state.autoSaveIntervalMin === "number"
+        ? state.autoSaveIntervalMin
+        : (autoSaveIntervalSelect ? Number(autoSaveIntervalSelect.value) : 0);
+      autoSaveStatus.textContent = interval > 0 ? `${interval}분` : "꺼짐";
+    }
+
+    if (autoSaveIntervalSelect && typeof state.autoSaveIntervalMin === "number") {
+      autoSaveIntervalSelect.value = String(state.autoSaveIntervalMin);
+    }
+
+    if (autoSaveFormatSelect && typeof state.autoSaveFormat === "string") {
+      autoSaveFormatSelect.value = state.autoSaveFormat;
+    }
+
+    if (showFloatingWidgetCheck && typeof state.showFloatingWidget === "boolean") {
+      showFloatingWidgetCheck.checked = state.showFloatingWidget;
+    }
+
+    // 5. 입력 필드 값 갱신 (제공된 경우)
+    // 5. Update input field values if provided
     if (selectorInput && typeof state.customSelector === "string") {
       selectorInput.value = state.customSelector;
     }
@@ -289,7 +321,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       STORAGE_KEYS.IS_RECORDING,
       STORAGE_KEYS.CUSTOM_SELECTOR,
       STORAGE_KEYS.TIMESTAMP_MODE,
-      STORAGE_KEYS.PAUSE_THRESHOLD_MS
+      STORAGE_KEYS.PAUSE_THRESHOLD_MS,
+      STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN,
+      STORAGE_KEYS.AUTO_SAVE_FORMAT,
+      STORAGE_KEYS.SHOW_FLOATING_WIDGET
     ], (data) => {
       if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
         console.warn("[Assembly Popup] Failed to read storage / 스토리지 읽기 실패:", chrome.runtime.lastError.message);
@@ -302,13 +337,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         timestampModeSelect.value = data[STORAGE_KEYS.TIMESTAMP_MODE];
       }
 
+      if (autoSaveIntervalSelect && typeof data[STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN] === "number") {
+        autoSaveIntervalSelect.value = String(data[STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN]);
+      }
+
+      if (autoSaveFormatSelect && typeof data[STORAGE_KEYS.AUTO_SAVE_FORMAT] === "string") {
+        autoSaveFormatSelect.value = data[STORAGE_KEYS.AUTO_SAVE_FORMAT];
+      }
+
+      if (showFloatingWidgetCheck && typeof data[STORAGE_KEYS.SHOW_FLOATING_WIDGET] === "boolean") {
+        showFloatingWidgetCheck.checked = data[STORAGE_KEYS.SHOW_FLOATING_WIDGET];
+      }
+
       updateUI({
         isRecording: Boolean(data[STORAGE_KEYS.IS_RECORDING]),
         records: Array.isArray(data[STORAGE_KEYS.RECORDS]) ? data[STORAGE_KEYS.RECORDS] : [],
         customSelector: data[STORAGE_KEYS.CUSTOM_SELECTOR] || "",
         pauseThresholdMs: typeof data[STORAGE_KEYS.PAUSE_THRESHOLD_MS] === "number"
           ? data[STORAGE_KEYS.PAUSE_THRESHOLD_MS]
-          : DEFAULT_PAUSE_MS
+          : DEFAULT_PAUSE_MS,
+        autoSaveIntervalMin: typeof data[STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN] === "number"
+          ? data[STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN]
+          : 0,
+        autoSaveFormat: data[STORAGE_KEYS.AUTO_SAVE_FORMAT] || "txt",
+        showFloatingWidget: data[STORAGE_KEYS.SHOW_FLOATING_WIDGET] !== false
       });
 
       // 3. 활성 탭과 통신하여 현재 수집 상태 실시간 동기화
@@ -599,18 +651,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // 12. 수동 CSS 선택자 변경 이벤트
-  // 12. Custom CSS selector input change handler
+  // 12. 커스텀 CSS 선택자 변경 이벤트
+  // 12. Custom CSS selector change handler
   if (selectorInput) {
     selectorInput.addEventListener("change", () => {
-      const val = selectorInput.value.trim();
+      const selectorVal = selectorInput.value.trim();
       if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ [STORAGE_KEYS.CUSTOM_SELECTOR]: val });
+        chrome.storage.local.set({ [STORAGE_KEYS.CUSTOM_SELECTOR]: selectorVal });
       }
       if (activeTab && activeTab.id) {
         chrome.tabs.sendMessage(activeTab.id, {
           action: "UPDATE_CONFIG",
-          customSelector: val
+          customSelector: selectorVal
         }, () => {
           if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
             // 주입되지 않은 탭 무시 / Ignore unconnected tabs
@@ -619,4 +671,83 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-});
+
+  // 13. 주기적 자동 저장 주기 변경 이벤트
+  // 13. Auto-save interval change handler
+  if (autoSaveIntervalSelect) {
+    autoSaveIntervalSelect.addEventListener("change", () => {
+      const val = Number(autoSaveIntervalSelect.value) || 0;
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ [STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN]: val });
+      }
+      if (autoSaveStatus) {
+        autoSaveStatus.textContent = val > 0 ? `${val}분` : "꺼짐";
+      }
+      if (activeTab && activeTab.id) {
+        chrome.tabs.sendMessage(activeTab.id, {
+          action: "UPDATE_CONFIG",
+          autoSaveIntervalMin: val
+        }, () => {
+          if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
+            // 주입되지 않은 탭 무시 / Ignore unconnected tabs
+          }
+        });
+      }
+      showToast(val === 0 ? "자동 저장이 꺼졌습니다." : `${val}분마다 자동 저장됩니다.`);
+    });
+  }
+
+  // 14. 자동 저장 파일 포맷 변경 이벤트
+  // 14. Auto-save file format change handler
+  if (autoSaveFormatSelect) {
+    autoSaveFormatSelect.addEventListener("change", () => {
+      const val = autoSaveFormatSelect.value;
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ [STORAGE_KEYS.AUTO_SAVE_FORMAT]: val });
+      }
+      if (activeTab && activeTab.id) {
+        chrome.tabs.sendMessage(activeTab.id, {
+          action: "UPDATE_CONFIG",
+          autoSaveFormat: val
+        }, () => {
+          if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
+            // 주입되지 않은 탭 무시 / Ignore unconnected tabs
+          }
+        });
+      }
+      showToast(`${val.toUpperCase()} 형식으로 자동 저장됩니다.`);
+    });
+  }
+
+  // 15. 웹페이지 내 플로팅 위젯 표시 여부 변경 이벤트
+  // 15. In-page floating widget visibility toggle handler
+  if (showFloatingWidgetCheck) {
+    showFloatingWidgetCheck.addEventListener("change", () => {
+      const checked = showFloatingWidgetCheck.checked;
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ [STORAGE_KEYS.SHOW_FLOATING_WIDGET]: checked });
+      }
+      if (activeTab && activeTab.id) {
+        chrome.tabs.sendMessage(activeTab.id, {
+          action: "UPDATE_CONFIG",
+          showFloatingWidget: checked
+        }, () => {
+          if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
+            // 주입되지 않은 탭 무시 / Ignore unconnected tabs
+          }
+        });
+      }
+      showToast(checked ? "방송 화면에 플로팅 버튼이 표시됩니다." : "플로팅 버튼이 숨겨졌습니다.");
+    });
+  }
+}
+
+// 브라우저 DOM 로드 상태에 따른 방어적 초기화
+// Defensive initialization depending on document readyState
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPopup);
+  } else {
+    initPopup();
+  }
+}

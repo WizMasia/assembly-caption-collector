@@ -17,6 +17,7 @@ assert.strictEqual(typeof TIMING.DEBOUNCE_MUTATION_MS, "number", "Debounce mutat
 assert.strictEqual(typeof TIMING.PREVIEW_MAX_ITEMS, "number", "Preview max items should be a number");
 assert.strictEqual(TIMING.TOAST_DURATION_MS, 2000, "Toast duration should be 2000ms");
 assert.strictEqual(TIMING.BLOB_REVOKE_DELAY_MS, 1000, "Blob revoke delay should be 1000ms");
+assert.strictEqual(typeof TIMING.DEFAULT_AUTO_SAVE_INTERVAL_MIN, "number", "Auto save interval should be a number");
 
 // 3. TIMESTAMP_MODES 검증 / Verify TIMESTAMP_MODES
 assert.deepStrictEqual(Object.keys(TIMESTAMP_MODES), ["PC", "PLAYER", "BOTH"]);
@@ -26,6 +27,7 @@ assert.strictEqual(TIMESTAMP_MODES.BOTH, "both");
 
 // 4. STORAGE_KEYS 검증 / Verify STORAGE_KEYS
 assert.ok(STORAGE_KEYS.RECORDS && STORAGE_KEYS.IS_RECORDING, "Storage keys must be defined");
+assert.ok(STORAGE_KEYS.AUTO_SAVE_INTERVAL_MIN, "AUTO_SAVE_INTERVAL_MIN must be defined");
 
 // 5. I18N 다국어 검증 / Verify I18N dictionaries
 assert.ok(I18N.ko && I18N.en, "Localization dictionaries must exist");
@@ -38,7 +40,9 @@ const requiredI18nKeys = [
   "copyFailed",
   "clipboardNotSupported",
   "clearSuccess",
-  "defaultTitle"
+  "defaultTitle",
+  "autoSaveLabel",
+  "floatingWidgetLabel"
 ];
 
 requiredI18nKeys.forEach((key) => {

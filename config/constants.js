@@ -84,7 +84,8 @@ const TIMING = Object.freeze({
   DEBOUNCE_MUTATION_MS: 80,          // DOM 변경 디바운스 대기 시간 (80ms) / DOM mutation debounce delay (80ms)
   PREVIEW_MAX_ITEMS: 30,             // 팝업 실시간 미리보기 최대 표시 개수 / Max items to display in preview (30)
   TOAST_DURATION_MS: 2000,           // 토스트 알림 노출 지속 시간 (2초) / Toast notification display duration (2000ms)
-  BLOB_REVOKE_DELAY_MS: 1000         // 다운로드 Blob URL 해제 대기 지연 시간 (1초) / Delay before revoking Blob URL after download (1000ms)
+  BLOB_REVOKE_DELAY_MS: 1000,        // 다운로드 Blob URL 해제 대기 지연 시간 (1초) / Delay before revoking Blob URL after download (1000ms)
+  DEFAULT_AUTO_SAVE_INTERVAL_MIN: 0  // 기본 자동 저장 주기 (0 = 끔) / Default auto-save interval in minutes (0 = disabled)
 });
 
 /**
@@ -108,7 +109,10 @@ const STORAGE_KEYS = Object.freeze({
   IS_RECORDING: "assembly_is_recording",
   CUSTOM_SELECTOR: "assembly_custom_selector",
   TIMESTAMP_MODE: "assembly_timestamp_mode",
-  PAUSE_THRESHOLD_MS: "assembly_pause_threshold_ms"
+  PAUSE_THRESHOLD_MS: "assembly_pause_threshold_ms",
+  AUTO_SAVE_INTERVAL_MIN: "assembly_auto_save_interval_min",
+  AUTO_SAVE_FORMAT: "assembly_auto_save_format",
+  SHOW_FLOATING_WIDGET: "assembly_show_floating_widget"
 });
 
 /**
@@ -141,7 +145,15 @@ const I18N = Object.freeze({
     tsModeLabel: "타임스탬프 방식:",
     pauseThresholdLabel: "문단 분할 침묵 기준(초):",
     customSelectorLabel: "수동 자막 엘리먼트 선택자 (선택):",
-    customSelectorPlaceholder: "#viewSubtit .incont 등"
+    customSelectorPlaceholder: "#viewSubtit .incont 등",
+    autoSaveLabel: "주기적 자동 파일 저장:",
+    autoSaveOff: "사용 안 함 (수동 다운로드)",
+    autoSave5m: "5분마다 자동 저장",
+    autoSave10m: "10분마다 자동 저장",
+    autoSave30m: "30분마다 자동 저장",
+    autoSaveFormatLabel: "자동 저장 파일 형식:",
+    floatingWidgetLabel: "웹페이지 내 플로팅 위젯 표시:",
+    autoSavedNotice: "자막이 자동 백업되었습니다."
   }),
   en: Object.freeze({
     appTitle: "Assembly Caption Collector",
@@ -167,7 +179,15 @@ const I18N = Object.freeze({
     tsModeLabel: "Timestamp Mode:",
     pauseThresholdLabel: "Pause Split Threshold (sec):",
     customSelectorLabel: "Custom Selector (Optional):",
-    customSelectorPlaceholder: "e.g. #viewSubtit .incont"
+    customSelectorPlaceholder: "e.g. #viewSubtit .incont",
+    autoSaveLabel: "Periodic Auto-Save:",
+    autoSaveOff: "Disabled (Manual only)",
+    autoSave5m: "Every 5 minutes",
+    autoSave10m: "Every 10 minutes",
+    autoSave30m: "Every 30 minutes",
+    autoSaveFormatLabel: "Auto-Save Format:",
+    floatingWidgetLabel: "Show In-Page Floating Widget:",
+    autoSavedNotice: "Captions auto-saved."
   })
 });
 
