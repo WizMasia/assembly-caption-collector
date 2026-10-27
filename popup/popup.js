@@ -43,12 +43,14 @@ document.addEventListener("DOMContentLoaded", async () => {
    * 타이밍 및 UI 제어 상수
    * Timing and UI control constants
    */
-  const PREVIEW_MAX_ITEMS = (Constants.TIMING && Constants.TIMING.PREVIEW_MAX_ITEMS) || 30;
-  const DEFAULT_PAUSE_MS = (Constants.TIMING && Constants.TIMING.DEFAULT_PAUSE_THRESHOLD_MS) || 3000;
+  const TIMING = Constants.TIMING || {};
+  const PREVIEW_MAX_ITEMS = TIMING.PREVIEW_MAX_ITEMS || 30;
+  const DEFAULT_PAUSE_MS = TIMING.DEFAULT_PAUSE_THRESHOLD_MS || 3000;
   const DEFAULT_PAUSE_SECONDS = Math.round(DEFAULT_PAUSE_MS / 1000);
-  const TOAST_DURATION_MS = 2000;
+  const TOAST_DURATION_MS = TIMING.TOAST_DURATION_MS || 2000;
+  const BLOB_REVOKE_DELAY_MS = TIMING.BLOB_REVOKE_DELAY_MS || 1000;
   const DEFAULT_TIMESTAMP_MODE = (Constants.TIMESTAMP_MODES && Constants.TIMESTAMP_MODES.BOTH) || "both";
-  const DEFAULT_FALLBACK_TITLE = "국회 의사중계 자막 기록";
+  const DEFAULT_FALLBACK_TITLE = i18n.defaultTitle || "국회 의사중계 자막 기록";
 
   // DOM 엘리먼트 바인딩 / Bind DOM elements
   /** @type {HTMLElement|null} */
@@ -397,7 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       if (!activeTab || !activeTab.id) {
-        showToast("활성화된 국회 의사중계 탭을 찾을 수 없습니다.");
+        showToast(i18n.tabNotFound || "활성화된 국회 의사중계 탭을 찾을 수 없습니다.");
         return;
       }
 
@@ -411,7 +413,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         pauseThresholdMs: pauseMs
       }, (response) => {
         if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.lastError) {
-          showToast("국회 의사중계 페이지가 열려 있는지 확인해주세요.");
+          showToast(i18n.notAssemblyPage || "국회 의사중계 페이지가 열려 있는지 확인해주세요.");
           return;
         }
         if (response) {
@@ -445,12 +447,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           })
           .catch((err) => {
             console.error("[Assembly Popup] Clipboard copy error / 클립보드 복사 실패:", err);
-            showToast("복사에 실패했습니다. 권한을 확인해주세요.");
+            showToast(i18n.copyFailed || "복사에 실패했습니다. 권한을 확인해주세요.");
           });
       } else {
         // 클립보드 API 미지원 환경 대비 폴백
         // Fallback for environments lacking clipboard API
-        showToast("클립보드 API가 지원되지 않는 환경입니다.");
+        showToast(i18n.clipboardNotSupported || "클립보드 API가 지원되지 않는 환경입니다.");
       }
     });
   }
@@ -479,7 +481,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               }
             });
           }
-          showToast("기록이 초기화되었습니다.");
+          showToast(i18n.clearSuccess || "기록이 초기화되었습니다.");
         });
       }
     });
@@ -502,20 +504,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), TIMING.BLOB_REVOKE_DELAY_MS || 1000);
   }
 
   /**
-   * 파일명에 사용할 수 없는 특수문자 치환 헬퍼
-   * Cleans filename by replacing invalid characters
+   * 파일명에 사용할 수 없는 특수문자 및 제어문자 치환 헬퍼
+   * Cleans filename by replacing invalid characters and control characters
    * @param {string} name - 원본 문서 제목 / Original document title
    * @returns {string} 안전한 파일명 / Safe filename
    */
   function sanitizeFilename(name) {
-    const fallback = (Constants.I18N && Constants.I18N.ko && Constants.I18N.ko.appTitle)
-      ? Constants.I18N.ko.appTitle.replace(/\s+/g, "_")
-      : "국회_의사중계_자막";
-    const cleaned = (name || fallback).replace(/[\\/:*?"<>|]/g, "_").trim();
+    const fallback = (i18n.appTitle || "국회_의사중계_자막").replace(/\s+/g, "_");
+    const cleaned = (name || fallback).replace(/[\\/:*?"<>|\r\n\t\x00-\x1f]/g, "_").trim();
     return cleaned.length > 0 ? cleaned : fallback;
   }
 
@@ -524,7 +524,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (downloadTxtBtn) {
     downloadTxtBtn.addEventListener("click", () => {
       if (!currentRecords || currentRecords.length === 0) {
-        alert(i18n.noData || "다운로드할 자막 기록이 없습니다.");
+        showToast(i18n.noData || "수집된 자막이 없습니다.");
         return;
       }
 
@@ -547,7 +547,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (downloadMdBtn) {
     downloadMdBtn.addEventListener("click", () => {
       if (!currentRecords || currentRecords.length === 0) {
-        alert(i18n.noData || "다운로드할 자막 기록이 없습니다.");
+        showToast(i18n.noData || "수집된 자막이 없습니다.");
         return;
       }
 

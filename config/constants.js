@@ -9,6 +9,8 @@
  * @property {number} DEFAULT_PAUSE_THRESHOLD_MS - 새 문단 분할 기준 침묵 시간 (ms) / Default silence threshold for paragraph splitting in ms
  * @property {number} DEBOUNCE_MUTATION_MS - DOM 변경 감지 디바운스 대기 시간 (ms) / Debounce delay for DOM mutations in ms
  * @property {number} PREVIEW_MAX_ITEMS - 팝업 실시간 미리보기 최대 표시 항목 수 / Maximum number of items in live preview
+ * @property {number} TOAST_DURATION_MS - 토스트 알림 노출 지속 시간 (ms) / Toast notification display duration in ms
+ * @property {number} BLOB_REVOKE_DELAY_MS - 다운로드 Blob URL 해제 대기 지연 시간 (ms) / Delay before revoking Blob URL after download in ms
  */
 
 /**
@@ -30,18 +32,24 @@
 /**
  * @typedef {Object} I18nItem
  * @property {string} appTitle - 확장 프로그램 제목 / Extension title
+ * @property {string} defaultTitle - 기본 자막 기록 제목 / Default caption records title
  * @property {string} statusRecording - 수집 중 상태 문구 / Recording status text
  * @property {string} statusStopped - 대기 중 상태 문구 / Stopped status text
  * @property {string} startRecord - 수집 시작 버튼 라벨 / Start recording button label
  * @property {string} stopRecord - 수집 중지 버튼 라벨 / Stop recording button label
  * @property {string} copyAll - 전체 복사 버튼 라벨 / Copy all button label
  * @property {string} copySuccess - 복사 성공 안내 메시지 / Copy success notification
+ * @property {string} copyFailed - 복사 실패 안내 메시지 / Copy failure notification
+ * @property {string} clipboardNotSupported - 클립보드 API 미지원 안내 메시지 / Clipboard API not supported notification
  * @property {string} clearRecords - 기록 비우기 버튼 라벨 / Clear records button label
  * @property {string} clearConfirm - 기록 초기화 확인 대화상자 문구 / Confirmation text for clearing records
+ * @property {string} clearSuccess - 기록 초기화 성공 안내 메시지 / Records cleared success notification
  * @property {string} downloadTxt - TXT 다운로드 버튼 라벨 / Download TXT button label
  * @property {string} downloadMd - MD 다운로드 버튼 라벨 / Download MD button label
  * @property {string} noData - 데이터 없음 안내 / No data notification
  * @property {string} emptyPreview - 빈 미리보기 안내 / Empty preview placeholder text
+ * @property {string} tabNotFound - 활성 탭 없음 안내 메시지 / No active tab found notification
+ * @property {string} notAssemblyPage - 의사중계 페이지 미확인 안내 메시지 / Not assembly webcast page notification
  * @property {string} settings - 상세 설정 헤더 라벨 / Settings accordion label
  * @property {string} tsModeLabel - 타임스탬프 방식 설정 라벨 / Timestamp mode field label
  * @property {string} pauseThresholdLabel - 문단 분할 침묵 기준 설정 라벨 / Pause threshold field label
@@ -74,7 +82,9 @@ const CANDIDATE_SELECTORS = Object.freeze([
 const TIMING = Object.freeze({
   DEFAULT_PAUSE_THRESHOLD_MS: 3000, // 새 문단 분할 기준 침묵 시간 (3초) / Silence threshold for new paragraph (3 seconds)
   DEBOUNCE_MUTATION_MS: 80,          // DOM 변경 디바운스 대기 시간 (80ms) / DOM mutation debounce delay (80ms)
-  PREVIEW_MAX_ITEMS: 30              // 팝업 실시간 미리보기 최대 표시 개수 / Max items to display in preview (30)
+  PREVIEW_MAX_ITEMS: 30,             // 팝업 실시간 미리보기 최대 표시 개수 / Max items to display in preview (30)
+  TOAST_DURATION_MS: 2000,           // 토스트 알림 노출 지속 시간 (2초) / Toast notification display duration (2000ms)
+  BLOB_REVOKE_DELAY_MS: 1000         // 다운로드 Blob URL 해제 대기 지연 시간 (1초) / Delay before revoking Blob URL after download (1000ms)
 });
 
 /**
@@ -109,18 +119,24 @@ const STORAGE_KEYS = Object.freeze({
 const I18N = Object.freeze({
   ko: Object.freeze({
     appTitle: "국회 의사중계 자막 수집기",
+    defaultTitle: "국회 의사중계 자막 기록",
     statusRecording: "수집 중",
     statusStopped: "대기 중",
     startRecord: "수집 시작",
     stopRecord: "수집 중지",
     copyAll: "전체 복사",
     copySuccess: "클립보드에 복사되었습니다.",
+    copyFailed: "복사에 실패했습니다. 권한을 확인해주세요.",
+    clipboardNotSupported: "클립보드 API가 지원되지 않는 환경입니다.",
     clearRecords: "기록 비우기",
     clearConfirm: "수집된 모든 자막 기록을 초기화하시겠습니까?",
+    clearSuccess: "기록이 초기화되었습니다.",
     downloadTxt: "TXT 다운로드",
     downloadMd: "MD 다운로드",
     noData: "수집된 자막이 없습니다.",
     emptyPreview: "아직 수집된 자막이 없습니다. 수집을 시작해 보세요.",
+    tabNotFound: "활성화된 국회 의사중계 탭을 찾을 수 없습니다.",
+    notAssemblyPage: "국회 의사중계 페이지가 열려 있는지 확인해주세요.",
     settings: "상세 설정",
     tsModeLabel: "타임스탬프 방식:",
     pauseThresholdLabel: "문단 분할 침묵 기준(초):",
@@ -129,18 +145,24 @@ const I18N = Object.freeze({
   }),
   en: Object.freeze({
     appTitle: "Assembly Caption Collector",
+    defaultTitle: "National Assembly Webcast Captions",
     statusRecording: "RECORDING",
     statusStopped: "STOPPED",
     startRecord: "Start",
     stopRecord: "Stop",
     copyAll: "Copy All",
     copySuccess: "Copied to clipboard.",
+    copyFailed: "Failed to copy. Please check clipboard permissions.",
+    clipboardNotSupported: "Clipboard API is not supported in this environment.",
     clearRecords: "Clear All",
     clearConfirm: "Are you sure you want to clear all recorded subtitles?",
+    clearSuccess: "All records cleared successfully.",
     downloadTxt: "TXT",
     downloadMd: "Markdown",
     noData: "No subtitles recorded.",
     emptyPreview: "No subtitles captured yet. Start recording.",
+    tabNotFound: "No active National Assembly webcast tab found.",
+    notAssemblyPage: "Please verify a National Assembly webcast page is open.",
     settings: "Settings",
     tsModeLabel: "Timestamp Mode:",
     pauseThresholdLabel: "Pause Split Threshold (sec):",

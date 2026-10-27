@@ -23,6 +23,7 @@ async function runTests() {
   const tabSentMessages = [];
   let clipboardText = "";
   const downloadedFiles = [];
+  const revokedUrls = [];
 
   class MockClassList {
     constructor() {
@@ -173,7 +174,9 @@ async function runTests() {
     createObjectURL(_blob) {
       return "blob:mock-url-" + Math.random();
     },
-    revokeObjectURL() {}
+    revokeObjectURL(url) {
+      revokedUrls.push(url);
+    }
   };
 
   // Node 21+ navigator.clipboard 정의
@@ -208,7 +211,8 @@ async function runTests() {
             isRecording: true,
             records: [{ id: "1", text: "회의를 시작합니다.", timestamp: "10:00:00", isParagraphStart: false }],
             customSelector: message.customSelector,
-            pauseThresholdMs: message.pauseThresholdMs
+            pauseThresholdMs: message.pauseThresholdMs,
+            title: "제418회\r\n\t국회본회의:?*<>\x1f"
           });
         } else if (message.action === "CLEAR_DATA") {
           if (callback) callback({
@@ -291,8 +295,8 @@ async function runTests() {
   console.log("✓ Copy all action passed");
 
   // -------------------------------------------------------------
-  // 검증 4: TXT 및 MD 내보내기 다운로드 기능
-  // Test 4: TXT & Markdown export download
+  // 검증 4: TXT 및 MD 내보내기 다운로드 기능 및 Blob URL 지연 해제
+  // Test 4: TXT & Markdown export download and delayed Blob URL revocation
   // -------------------------------------------------------------
   elements.downloadTxtBtn.click();
   elements.downloadMdBtn.click();
@@ -300,7 +304,19 @@ async function runTests() {
   assert.strictEqual(downloadedFiles.length, 2);
   assert.ok(downloadedFiles[0].filename.endsWith(".txt"));
   assert.ok(downloadedFiles[1].filename.endsWith(".md"));
-  console.log("✓ Export downloads passed");
+
+  // 파일명 살균(Sanitize) 검증 - 제어문자 및 특수문자 치환
+  // Verify filename sanitization - replaces control chars and special chars
+  assert.ok(!/[\r\n\t\x00-\x1f]/.test(downloadedFiles[0].filename), "Filename should not contain control chars or newlines");
+  assert.ok(!/[\\/:*?"<>|]/.test(downloadedFiles[0].filename.split(".txt")[0]), "Filename should not contain illegal path characters");
+  assert.ok(downloadedFiles[0].filename.startsWith("제418회___국회본회의_______"), "Control and illegal characters should be sanitized to '_'");
+
+  // Blob URL 즉시 해제 방지 및 지연 해제 검증
+  // Verify Blob URL is not revoked immediately and is revoked after delay
+  assert.strictEqual(revokedUrls.length, 0, "Blob URL should not be revoked immediately / 즉시 해제되지 않아야 함");
+  await new Promise((r) => setTimeout(r, 1100));
+  assert.strictEqual(revokedUrls.length, 2, "Blob URLs should be revoked after delay / 지연 시간 후 Blob URL 해제 확인");
+  console.log("✓ Export downloads and delayed Blob revoke passed");
 
   // -------------------------------------------------------------
   // 검증 5: 설정 변경 (타임스탬프 모드, 침묵 기준, 셀렉터)
@@ -349,7 +365,24 @@ async function runTests() {
   assert.strictEqual(elements.itemCount.textContent, "0");
   assert.strictEqual(elements.lastTime.textContent, "-");
   assert.deepStrictEqual(mockStorageData["assembly_caption_records"], []);
+  assert.strictEqual(elements.toast.textContent, "기록이 초기화되었습니다.");
   console.log("✓ Clear records passed");
+
+  // -------------------------------------------------------------
+  // 검증 8: 자막 없는 상태에서 다운로드 시도 시 alert 대신 toast 표시 검증
+  // Test 8: Download attempt with empty records shows toast instead of native alert
+  // -------------------------------------------------------------
+  let alertCallCount = 0;
+  global.alert = () => { alertCallCount++; };
+
+  elements.downloadTxtBtn.click();
+  assert.strictEqual(alertCallCount, 0, "Native alert should not be called / alert이 호출되지 않아야 함");
+  assert.strictEqual(elements.toast.textContent, "수집된 자막이 없습니다.");
+
+  elements.downloadMdBtn.click();
+  assert.strictEqual(alertCallCount, 0, "Native alert should not be called / alert이 호출되지 않아야 함");
+  assert.strictEqual(elements.toast.textContent, "수집된 자막이 없습니다.");
+  console.log("✓ Empty download toast warning passed (no alert)");
 
   console.log("All Task 6 popup tests passed! / 모든 팝업 테스트를 통과했습니다!");
 }

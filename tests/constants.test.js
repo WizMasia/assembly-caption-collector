@@ -15,6 +15,8 @@ assert.ok(CANDIDATE_SELECTORS.includes("#viewSubtit .incont"), "Should include p
 assert.ok(TIMING.DEFAULT_PAUSE_THRESHOLD_MS > 0, "Default pause threshold should be positive");
 assert.strictEqual(typeof TIMING.DEBOUNCE_MUTATION_MS, "number", "Debounce mutation delay should be a number");
 assert.strictEqual(typeof TIMING.PREVIEW_MAX_ITEMS, "number", "Preview max items should be a number");
+assert.strictEqual(TIMING.TOAST_DURATION_MS, 2000, "Toast duration should be 2000ms");
+assert.strictEqual(TIMING.BLOB_REVOKE_DELAY_MS, 1000, "Blob revoke delay should be 1000ms");
 
 // 3. TIMESTAMP_MODES 검증 / Verify TIMESTAMP_MODES
 assert.deepStrictEqual(Object.keys(TIMESTAMP_MODES), ["PC", "PLAYER", "BOTH"]);
@@ -29,5 +31,32 @@ assert.ok(STORAGE_KEYS.RECORDS && STORAGE_KEYS.IS_RECORDING, "Storage keys must 
 assert.ok(I18N.ko && I18N.en, "Localization dictionaries must exist");
 assert.strictEqual(typeof I18N.ko.appTitle, "string");
 assert.strictEqual(typeof I18N.en.appTitle, "string");
+
+const requiredI18nKeys = [
+  "tabNotFound",
+  "notAssemblyPage",
+  "copyFailed",
+  "clipboardNotSupported",
+  "clearSuccess",
+  "defaultTitle"
+];
+
+requiredI18nKeys.forEach((key) => {
+  assert.ok(I18N.ko[key], `ko.${key} must be defined`);
+  assert.ok(I18N.en[key], `en.${key} must be defined`);
+});
+
+assert.strictEqual(I18N.ko.tabNotFound, "활성화된 국회 의사중계 탭을 찾을 수 없습니다.");
+assert.strictEqual(I18N.en.tabNotFound, "No active National Assembly webcast tab found.");
+assert.strictEqual(I18N.ko.notAssemblyPage, "국회 의사중계 페이지가 열려 있는지 확인해주세요.");
+assert.strictEqual(I18N.en.notAssemblyPage, "Please verify a National Assembly webcast page is open.");
+assert.strictEqual(I18N.ko.copyFailed, "복사에 실패했습니다. 권한을 확인해주세요.");
+assert.strictEqual(I18N.en.copyFailed, "Failed to copy. Please check clipboard permissions.");
+assert.strictEqual(I18N.ko.clipboardNotSupported, "클립보드 API가 지원되지 않는 환경입니다.");
+assert.strictEqual(I18N.en.clipboardNotSupported, "Clipboard API is not supported in this environment.");
+assert.strictEqual(I18N.ko.clearSuccess, "기록이 초기화되었습니다.");
+assert.strictEqual(I18N.en.clearSuccess, "All records cleared successfully.");
+assert.strictEqual(I18N.ko.defaultTitle, "국회 의사중계 자막 기록");
+assert.strictEqual(I18N.en.defaultTitle, "National Assembly Webcast Captions");
 
 console.log("Task 1 test passed!");
