@@ -18,7 +18,9 @@
  * @typedef {Object} CaptionEngineOptions
  * @property {Array<string>} [candidateSelectors] - 자막 DOM 탐색용 선택자 목록 / Candidate CSS selectors for caption DOM
  * @property {number} [pauseThresholdMs] - 문단 분할 기준 침묵 밀리초 / Silence threshold in milliseconds for paragraph splitting
+ * @property {number} [debounceMs] - DOM 변경 감지 디바운스 대기 밀리초 / Debounce delay in milliseconds for DOM mutations
  * @property {string} [customSelector] - 사용자 지정 자막 컨테이너 선택자 / Custom caption container selector
+ * @property {Array<CaptionRecord>} [records] - 초기 복원 자막 레코드 목록 / Initial restored caption records
  * @property {((record: CaptionRecord, records: Array<CaptionRecord>) => void)|null} [onRecordAdded] - 신규 자막 추가 콜백 / Callback when record is added
  */
 
@@ -46,6 +48,13 @@ let candidateSelectorsDefault = [
  */
 let defaultPauseThresholdMs = 3000;
 
+/**
+ * 기본 DOM 변경 디바운스 대기 시간 (ms)
+ * Default DOM mutation debounce delay in milliseconds
+ * @type {number}
+ */
+let defaultDebounceMutationMs = 80;
+
 // Node.js 환경에서 config/constants.js 불러오기 시도
 // Try loading config/constants.js in Node.js environment
 if (typeof require !== "undefined") {
@@ -56,6 +65,9 @@ if (typeof require !== "undefined") {
     }
     if (constants.TIMING && typeof constants.TIMING.DEFAULT_PAUSE_THRESHOLD_MS === "number") {
       defaultPauseThresholdMs = constants.TIMING.DEFAULT_PAUSE_THRESHOLD_MS;
+    }
+    if (constants.TIMING && typeof constants.TIMING.DEBOUNCE_MUTATION_MS === "number") {
+      defaultDebounceMutationMs = constants.TIMING.DEBOUNCE_MUTATION_MS;
     }
   } catch (_) {
     // constants.js 파일이 없을 경우 기본값 유지 / Keep defaults if constants.js is not found
@@ -74,6 +86,9 @@ if (typeof require !== "undefined") {
     }
     if (consts.TIMING && typeof consts.TIMING.DEFAULT_PAUSE_THRESHOLD_MS === "number") {
       defaultPauseThresholdMs = consts.TIMING.DEFAULT_PAUSE_THRESHOLD_MS;
+    }
+    if (consts.TIMING && typeof consts.TIMING.DEBOUNCE_MUTATION_MS === "number") {
+      defaultDebounceMutationMs = consts.TIMING.DEBOUNCE_MUTATION_MS;
     }
   }
 }
@@ -125,6 +140,15 @@ class CaptionEngine {
     this.customSelector = typeof options.customSelector === "string" ? options.customSelector.trim() : "";
 
     /**
+     * DOM 변경 감지 디바운스 대기 시간 (밀리초)
+     * Debounce delay in ms for DOM mutation detection
+     * @type {number}
+     */
+    this.debounceMs = typeof options.debounceMs === "number" && options.debounceMs >= 0
+      ? options.debounceMs
+      : defaultDebounceMutationMs;
+
+    /**
      * 수집된 자막 레코드 배열
      * Collected caption record array
      * @type {Array<CaptionRecord>}
@@ -146,6 +170,20 @@ class CaptionEngine {
     this.lastRecordTime = 0;
 
     /**
+     * DOM 변경 감지 디바운스 타이머 식별자
+     * Debounce timer handle for DOM mutation events
+     * @type {NodeJS.Timeout|number|null}
+     */
+    this.debounceTimer = null;
+
+    /**
+     * 현재 옵저버가 감시 중인 대상 DOM 엘리먼트
+     * Currently observed target DOM element
+     * @type {Element|null}
+     */
+    this.observedTarget = null;
+
+    /**
      * DOM 변경 감지기 인스턴스
      * MutationObserver instance for DOM changes
      * @type {MutationObserver|null}
@@ -158,6 +196,12 @@ class CaptionEngine {
      * @type {((record: CaptionRecord, records: Array<CaptionRecord>) => void)|null}
      */
     this.onRecordAdded = typeof options.onRecordAdded === "function" ? options.onRecordAdded : null;
+
+    // 초기 전달된 복원 레코드가 있는 경우 상태 복원
+    // Restore state if initial restored records are provided
+    if (options.records && Array.isArray(options.records)) {
+      this.initRecords(options.records);
+    }
   }
 
   /**
@@ -298,15 +342,72 @@ class CaptionEngine {
   }
 
   /**
-   * DOM 변경 감지 시 전달받은 원본 텍스트 처리
-   * Handles caption mutation events and adds non-duplicate records
+   * 스토리지에서 복원된 자막 레코드 목록 초기화 및 엔진 내부 상태 복구
+   * Initializes records restored from storage and recovers engine internal state
+   * @param {Array<CaptionRecord>} [records=[]] - 복원할 자막 레코드 목록 / Caption records to restore
+   * @returns {void}
+   */
+  initRecords(records) {
+    if (Array.isArray(records) && records.length > 0) {
+      this.records = [...records];
+      const lastRecord = this.records[this.records.length - 1];
+      this.lastLoggedText = (lastRecord && typeof lastRecord.text === "string") ? lastRecord.text : "";
+
+      // 마지막 레코드 ID에서 밀리초 타임스탬프 파싱 시도 (형식: {timestamp}-{suffix})
+      // Attempt to parse millisecond timestamp from last record ID (format: {timestamp}-{suffix})
+      let restoredTime = Date.now();
+      if (lastRecord && typeof lastRecord.id === "string") {
+        const parsedTime = parseInt(lastRecord.id.split("-")[0], 10);
+        if (!Number.isNaN(parsedTime) && parsedTime > 0) {
+          restoredTime = parsedTime;
+        }
+      }
+      this.lastRecordTime = restoredTime;
+    } else {
+      this.records = [];
+      this.lastLoggedText = "";
+      this.lastRecordTime = 0;
+    }
+  }
+
+  /**
+   * DOM 변경 감지 시 전달받은 원본 텍스트 처리 (점진적 STT 갱신 포함)
+   * Handles caption mutation events, supports progressive STT streaming updates, and adds records
    * @param {string} rawText - 감지된 DOM 원본 텍스트 / Raw text detected from DOM
-   * @returns {CaptionRecord|null} 추가된 레코드 또는 null / Added record or null
+   * @returns {CaptionRecord|null} 추가 또는 갱신된 레코드 또는 null / Added or updated record or null
    */
   handleMutationText(rawText) {
     const clean = this.cleanText(rawText);
     if (!clean || this.isDuplicate(clean, this.lastLoggedText)) {
       return null;
+    }
+
+    const currentTimeMs = Date.now();
+
+    // 점진적 음성인식 스트리밍(STT 텍스트 점진 확장) 감지:
+    // 직전 수집 텍스트로 시작하고 침묵 기준 시간(pauseThresholdMs) 이내인 경우 기존 마지막 레코드 본문 갱신
+    // Progressive STT streaming expansion:
+    // When cleanText starts with lastLoggedText within pauseThresholdMs and lastLoggedText is non-empty, update last record
+    const isExpandingLastRecord = Boolean(this.lastLoggedText)
+      && this.records.length > 0
+      && clean.startsWith(this.lastLoggedText)
+      && (currentTimeMs - this.lastRecordTime) < this.pauseThresholdMs;
+
+    if (isExpandingLastRecord) {
+      const lastRecord = this.records[this.records.length - 1];
+      lastRecord.text = clean;
+      this.lastLoggedText = clean;
+      this.lastRecordTime = currentTimeMs;
+
+      if (typeof this.onRecordAdded === "function") {
+        try {
+          this.onRecordAdded(lastRecord, this.records);
+        } catch (_) {
+          // 콜백 오류 무시 / Suppress callback errors
+        }
+      }
+
+      return lastRecord;
     }
 
     const record = this.createRecord(clean);
@@ -325,8 +426,8 @@ class CaptionEngine {
   }
 
   /**
-   * MutationObserver를 통한 자막 DOM 감시 시작
-   * Starts observing caption DOM mutations using MutationObserver
+   * MutationObserver를 통한 자막 DOM 감시 시작 (디바운스 및 동적 대상 재지정 적용)
+   * Starts observing caption DOM mutations using MutationObserver (debounced with dynamic retargeting)
    */
   startObserving() {
     this.stopObserving();
@@ -334,19 +435,42 @@ class CaptionEngine {
       return;
     }
 
-    const target = this.findCaptionContainer() || document.body;
+    const initialContainer = this.findCaptionContainer();
+    const target = initialContainer || document.body;
     if (!target) {
       return;
     }
 
+    this.observedTarget = target;
     this.observer = new MutationObserver(() => {
-      const container = this.findCaptionContainer();
-      if (container) {
-        /** @type {HTMLElement} */
-        const htmlContainer = /** @type {HTMLElement} */ (container);
-        const text = htmlContainer.innerText || htmlContainer.textContent || "";
-        this.handleMutationText(text);
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
       }
+
+      this.debounceTimer = setTimeout(() => {
+        this.debounceTimer = null;
+
+        const currentContainer = this.findCaptionContainer();
+        if (currentContainer) {
+          // document.body를 감시 중이었으나 구체적인 자막 컨테이너가 탐색된 경우 옵저버 대상 재지정
+          // Retarget observer to the discovered caption container if initially observing document.body
+          if (this.observedTarget !== currentContainer && this.observer) {
+            this.observer.disconnect();
+            this.observedTarget = currentContainer;
+            this.observer.observe(currentContainer, {
+              childList: true,
+              subtree: true,
+              characterData: true
+            });
+          }
+
+          /** @type {HTMLElement} */
+          const htmlContainer = /** @type {HTMLElement} */ (currentContainer);
+          const text = htmlContainer.innerText || htmlContainer.textContent || "";
+          this.handleMutationText(text);
+        }
+      }, this.debounceMs);
     });
 
     this.observer.observe(target, {
@@ -357,21 +481,30 @@ class CaptionEngine {
   }
 
   /**
-   * 자막 DOM 감시 중단 및 옵저버 해제
-   * Stops observing DOM mutations and disconnects observer
+   * 자막 DOM 감시 중단 및 옵저버/디바운스 타이머 해제
+   * Stops observing DOM mutations and cleans up observer/debounce timer
    */
   stopObserving() {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
     }
+    this.observedTarget = null;
   }
 
   /**
-   * 메모리에 저장된 자막 기록 및 이전 상태 초기화
-   * Clears in-memory records and state
+   * 메모리에 저장된 자막 기록, 디바운스 타이머 및 이전 상태 초기화
+   * Clears in-memory records, debounce timer, and internal state
    */
   clear() {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
     this.records = [];
     this.lastLoggedText = "";
     this.lastRecordTime = 0;
