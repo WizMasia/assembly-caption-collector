@@ -1,0 +1,19 @@
+{
+  "name": "assembly-caption-collector",
+  "version": "1.0.0",
+  "description": "대한민국 국회 의사중계 실시간 자막 수집기 (Chrome Extension Manifest V3)",
+  "private": true,
+  "scripts": {
+    "test": "node tests/constants.test.js && node tests/export-formatter.test.js && node tests/caption-engine.test.js && node tests/popup.test.js",
+    "package": "node scripts/package.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "korea-national-assembly",
+    "captions",
+    "subtitles",
+    "webcast"
+  ],
+  "author": "WizMasia",
+  "license": "MIT"
+}

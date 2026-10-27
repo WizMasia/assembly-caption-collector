@@ -28,6 +28,11 @@ logs/
 *.temp
 .cache/
 
+# Build and Release Artifacts
+dist/
+build/
+*.zip
+
 # IDE & Editor Settings
 .idea/
 .vscode/
