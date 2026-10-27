@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "대한민국 국회 의사중계 실시간 자막 수집기",
+  "version": "1.0.0",
+  "description": "국회 의사중계 웹 플레이어의 실시간 자막을 감지하여 듀얼 타임스탬프와 스마트 문단 분할과 함께 텍스트/마크다운 문서로 저장합니다.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.assembly.go.kr/*",
+    "*://*.webcast.go.kr/*",
+    "*://*.natv.go.kr/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "국회 의사중계 자막 수집기",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.assembly.go.kr/*",
+        "*://*.webcast.go.kr/*",
+        "*://*.natv.go.kr/*"
+      ],
+      "js": [
+        "config/constants.js",
+        "utils/export-formatter.js",
+        "content/caption-engine.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
