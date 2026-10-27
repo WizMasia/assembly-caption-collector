@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!--
+  @file popup.html
+  @description 국회 의사중계 자막 수집기 팝업 UI 레이아웃
+  Popup UI layout for Assembly Caption Collector Chrome Extension
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>국회 자막 수집기</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 헤더 영역: 로고 및 실시간 수집 상태 뱃지 / Header: Logo and Live Status Badge -->
+    <header class="app-header">
+      <div class="logo-group">
+        <span class="logo-icon" aria-hidden="true">🏛️</span>
+        <h1 class="logo-title" id="txtAppTitle">국회 자막 수집기</h1>
+      </div>
+      <div id="statusBadge" class="status-badge status-stopped" role="status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span id="txtStatus" class="status-text">대기 중</span>
+      </div>
+    </header>
+
+    <!-- 통계 카드: 수집 문장 수 및 최근 수집 시각 / Stats Card: Sentence Count & Last Timestamp -->
+    <section class="stats-card" aria-label="수집 현황">
+      <div class="stat-item">
+        <span class="stat-label">수집 문장</span>
+        <strong id="itemCount" class="stat-value">0</strong>
+      </div>
+      <div class="stat-divider" aria-hidden="true"></div>
+      <div class="stat-item">
+        <span class="stat-label">최근 수집</span>
+        <span id="lastTime" class="stat-value-sub">-</span>
+      </div>
+    </section>
+
+    <!-- 실시간 미리보기 스트림: 자막 리스트 및 복사 버튼 / Live Preview Stream: Captions & Copy Action -->
+    <section class="preview-section" aria-label="실시간 자막 스트림">
+      <div class="section-header">
+        <span class="section-title">실시간 자막 스트림</span>
+        <button id="copyAllBtn" class="btn-icon" title="전체 복사" type="button">📋 복사</button>
+      </div>
+      <div id="previewList" class="preview-list" role="log" aria-live="polite">
+        <div class="empty-state" id="emptyNotice">아직 수집된 자막이 없습니다.</div>
+      </div>
+    </section>
+
+    <!-- 제어 및 내보내기 버튼 영역 / Control and Export Actions -->
+    <section class="actions-section" aria-label="제어 및 내보내기">
+      <div class="button-row">
+        <button id="toggleBtn" class="btn btn-primary" type="button">
+          <span class="btn-icon-symbol" aria-hidden="true">▶</span>
+          <span id="txtToggle">수집 시작</span>
+        </button>
+        <button id="clearBtn" class="btn btn-secondary" type="button">
+          <span>기록 비우기</span>
+        </button>
+      </div>
+
+      <div class="button-row">
+        <button id="downloadTxtBtn" class="btn btn-outline" type="button">
+          <span>TXT 다운로드</span>
+        </button>
+        <button id="downloadMdBtn" class="btn btn-outline" type="button">
+          <span>Markdown 다운로드</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 상세 설정 아코디언 / Detailed Settings Accordion -->
+    <details class="settings-accordion">
+      <summary class="settings-summary">⚙️ 상세 설정 (타임스탬프 / 셀렉터)</summary>
+      <div class="settings-body">
+        <div class="form-group">
+          <label for="timestampModeSelect">타임스탬프 형식</label>
+          <select id="timestampModeSelect" class="form-select">
+            <option value="both">PC 시각 + 영상 시각 병기 (추천)</option>
+            <option value="pc">PC 절대 시각만</option>
+            <option value="player">영상 재생 시각만</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="pauseThresholdInput">문단 분할 침묵 기준 (초)</label>
+          <input type="number" id="pauseThresholdInput" class="form-input" min="1" max="30" value="3">
+        </div>
+
+        <div class="form-group">
+          <label for="selectorInput">수동 CSS 선택자 (기본 감지 실패 시)</label>
+          <input type="text" id="selectorInput" class="form-input" placeholder="#viewSubtit .incont">
+        </div>
+      </div>
+    </details>
+
+    <!-- 토스트 알림 / Toast Notification -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive">클립보드에 복사되었습니다.</div>
+  </div>
+
+  <!-- 스크립트 의존성 로드 / Load Script Dependencies -->
+  <script src="../config/constants.js"></script>
+  <script src="../utils/export-formatter.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

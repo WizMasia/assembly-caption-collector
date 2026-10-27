@@ -1,0 +1,532 @@
+/**
+ * @file popup.css
+ * @description 국회 자막 수집기 팝업 UI 스타일시트 (모던 미니멀 디자인 및 마이크로 인터랙션)
+ * Popup UI stylesheet for Assembly Caption Collector (Modern Minimalist & Micro-interactions)
+ */
+
+/* ==========================================================================
+   1. 디자인 토큰 및 CSS 변수 / Design Tokens & CSS Variables
+   ========================================================================== */
+:root {
+  /* 색상 팔레트 / Color Palette */
+  --bg-color: #f8fafc;
+  --surface-color: #ffffff;
+  --text-main: #0f172a;
+  --text-sub: #64748b;
+  --text-muted: #94a3b8;
+
+  /* 테마 및 상태 색상 / Theme & Status Colors */
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-light: #eff6ff;
+
+  --danger-color: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-active: #b91c1c;
+
+  --success-color: #10b981;
+  --success-bg: #d1fae5;
+  --success-text: #065f46;
+
+  --neutral-bg: #f1f5f9;
+  --neutral-border: #cbd5e1;
+  --neutral-hover: #e2e8f0;
+
+  /* 경계선 및 반경 / Borders & Radius */
+  --border-color: #e2e8f0;
+  --border-focus: #3b82f6;
+  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 20px;
+
+  /* 그림자 효과 / Box Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-toast: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  /* 타이포그래피 / Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --transition-fast: 0.15s ease-in-out;
+  --transition-normal: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   2. 기본 리셋 및 레이아웃 / Reset & Base Layout
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 360px;
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ==========================================================================
+   3. 헤더 영역 / Header Section
+   ========================================================================== */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logo-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.logo-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+/* 상태 뱃지 / Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  transition: all var(--transition-normal);
+  user-select: none;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transition: background-color var(--transition-fast);
+}
+
+/* 정지 상태 / Stopped Status */
+.status-stopped {
+  background-color: var(--neutral-border);
+  color: var(--text-sub);
+}
+
+.status-stopped .status-dot {
+  background-color: var(--text-muted);
+}
+
+/* 수집 중 상태 및 펄스 애니메이션 / Recording Status & Pulse Animation */
+.status-recording {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+}
+
+.status-recording .status-dot {
+  background-color: var(--success-color);
+  box-shadow: 0 0 6px var(--success-color);
+  animation: pulseDot 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+}
+
+/* ==========================================================================
+   4. 통계 카드 / Statistics Card
+   ========================================================================== */
+.stats-card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-sub);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1.2;
+}
+
+.stat-value-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background-color: var(--border-color);
+  margin: 0 12px;
+}
+
+/* ==========================================================================
+   5. 실시간 미리보기 스트림 / Live Preview Stream
+   ========================================================================== */
+.preview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-icon:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-hover);
+}
+
+.btn-icon:active {
+  transform: scale(0.96);
+}
+
+.preview-list {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  height: 140px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* 커스텀 스크롤바 / Custom Scrollbar */
+.preview-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.preview-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.preview-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.preview-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.empty-state {
+  margin: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+  user-select: none;
+}
+
+/* 자막 아이템 / Caption Preview Item */
+.preview-item {
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background-color: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.preview-item:hover {
+  background-color: #f1f5f9;
+}
+
+/* 단락 시작 자막 강조 스타일링 / Paragraph Start Highlight */
+.preview-item.para-start {
+  border-left-color: var(--primary-color);
+  background-color: #f0f7ff;
+  margin-top: 5px;
+}
+
+.preview-meta {
+  font-size: 10px;
+  color: var(--text-sub);
+  margin-bottom: 2px;
+  display: flex;
+  gap: 4px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-text {
+  color: var(--text-main);
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* ==========================================================================
+   6. 제어 및 액션 버튼 / Control & Action Buttons
+   ========================================================================== */
+.actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.button-row {
+  display: flex;
+  gap: 6px;
+}
+
+.btn {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform 0.08s ease, box-shadow var(--transition-fast);
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* 주요 동작 버튼 (수집 시작) / Primary Action (Start) */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-primary:active {
+  background-color: var(--primary-active);
+}
+
+/* 위험/중지 버튼 (수집 중지) / Danger Action (Stop) */
+.btn-danger {
+  background-color: var(--danger-color);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+  background-color: var(--danger-hover);
+}
+
+.btn-danger:active {
+  background-color: var(--danger-active);
+}
+
+/* 보조 버튼 (기록 비우기) / Secondary Button (Clear) */
+.btn-secondary {
+  background-color: var(--neutral-bg);
+  border-color: var(--neutral-border);
+  color: #334155;
+}
+
+.btn-secondary:hover {
+  background-color: var(--neutral-hover);
+  border-color: #94a3b8;
+}
+
+/* 외곽선 버튼 (내보내기) / Outline Buttons (Download) */
+.btn-outline {
+  background-color: var(--surface-color);
+  border-color: var(--neutral-border);
+  color: #334155;
+  font-size: 12px;
+}
+
+.btn-outline:hover {
+  background-color: var(--bg-color);
+  border-color: #94a3b8;
+}
+
+.btn-icon-symbol {
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   7. 상세 설정 아코디언 / Settings Accordion
+   ========================================================================== */
+.settings-accordion {
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+.settings-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  transition: color var(--transition-fast);
+}
+
+.settings-summary:hover {
+  color: var(--text-main);
+}
+
+.settings-summary:focus-visible {
+  outline: 2px solid var(--border-focus);
+  border-radius: var(--radius-sm);
+}
+
+.settings-body {
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 11px;
+  color: var(--text-sub);
+  font-weight: 500;
+}
+
+.form-select,
+.form-input {
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-color);
+  color: var(--text-main);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-select:hover,
+.form-input:hover {
+  border-color: #cbd5e1;
+}
+
+.form-select:focus,
+.form-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* ==========================================================================
+   8. 토스트 알림 컴포넌트 / Toast Notification Component
+   ========================================================================== */
+.toast {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%) translateY(50px);
+  background-color: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform var(--transition-normal), opacity var(--transition-normal);
+  box-shadow: var(--shadow-toast);
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
